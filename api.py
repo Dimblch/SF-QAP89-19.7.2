@@ -1,22 +1,25 @@
-
+"""Модуль 19"""
 import json
+
 import requests
+from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 
 class PetFriends:
-    """API библиотека к веб приложению Pet Friends"""
+    """api библиотека к веб приложению Pet Friends"""
 
     def __init__(self):
-        self.base_url = 'https://petfriends.skillfactory.ru/'
+        self.base_url = "https://petfriends.skillfactory.ru/"
 
-    def get_api_key(self, email: str, password: str) -> json:
-        """This method allows to get API key which should be used for other API methods."""
+    def get_api_key(self, email: str, passwd: str) -> json:
+        """Метод делает запрос к API сервера и возвращает статус запроса и результат в формате
+        JSON с уникальным ключом пользователя, найденного по указанным email и паролем"""
 
         headers = {
             'email': email,
-            'password': password,
+            'password': passwd,
         }
-        res = requests.get(self.base_url +'api/key', headers=headers)
+        res = requests.get(self.base_url+'api/key', headers=headers)
         status = res.status_code
         result = ""
         try:
@@ -25,15 +28,16 @@ class PetFriends:
             result = res.text
         return status, result
 
+    def get_list_of_pets(self, auth_key: json, filter: str = "") -> json:
+        """Метод делает запрос к API сервера и возвращает статус запроса и результат в формате JSON
+        со списком найденных питомцев, совпадающих с фильтром. На данный момент фильтр может иметь
+        либо пустое значение - получить список всех питомцев, либо 'my_pets' - получить список
+        собственных питомцев"""
 
-    def get_list_of_pets(self, auth_key: str, filter: str ='my_pets') -> json:
-        """This method allows to get the list of pets."""
+        headers = {'auth_key': auth_key['key']}
+        filter = {'filter': filter}
 
-        headers = {
-            'auth_key': auth_key,
-            'filter': filter,
-        }
-        res = requests.get(self.base_url + 'api/pets', headers=headers)
+        res = requests.get(self.base_url + 'api/pets', headers=headers, params=filter)
         status = res.status_code
         result = ""
         try:
@@ -42,19 +46,20 @@ class PetFriends:
             result = res.text
         return status, result
 
+    def add_new_pet(self, auth_key: json, name: str, animal_type: str,
+                    age: str, pet_photo: str) -> json:
+        """Метод отправляет (постит) на сервер данные о добавляемом питомце и возвращает статус
+        запроса на сервер и результат в формате JSON с данными добавленного питомца"""
 
-    def post_add_new_pet(self, auth_key: str, name: str, animal_type: str, age: int, pet_photo: str) -> json:
-        """This method allows to add information about new pet."""
+        data = MultipartEncoder(
+            fields={
+                'name': name,
+                'animal_type': animal_type,
+                'age': age,
+                'pet_photo': (pet_photo, open(pet_photo, 'rb'), 'image/jpeg')
+            })
+        headers = {'auth_key': auth_key['key'], 'Content-Type': data.content_type}
 
-        headers = {
-            'auth_key': auth_key,
-        }
-        data = {
-            'name': name,
-            'animal_type': animal_type,
-            'age': age,
-            'pet_photo': pet_photo,
-        }
         res = requests.post(self.base_url + 'api/pets', headers=headers, data=data)
         status = res.status_code
         result = ""
@@ -64,14 +69,14 @@ class PetFriends:
             result = res.text
         return status, result
 
+    def delete_pet(self, auth_key: json, pet_id: str) -> json:
+        """Метод отправляет на сервер запрос на удаление питомца по указанному ID и возвращает
+        статус запроса и результат в формате JSON с текстом уведомления об успешном удалении.
+        На сегодняшний день тут есть баг - в result приходит пустая строка, но status при этом = 200"""
 
-    def delete_pet(self, auth_key: str, pet_id: str) -> json:
-        """This method allows to delete information about pet from database."""
+        headers = {'auth_key': auth_key['key']}
 
-        headers = {
-            'auth_key': auth_key,
-        }
-        res = requests.delete(self.base_url + 'api/pets' + pet_id, headers=headers)
+        res = requests.delete(self.base_url + 'api/pets/' + pet_id, headers=headers)
         status = res.status_code
         result = ""
         try:
@@ -80,19 +85,19 @@ class PetFriends:
             result = res.text
         return status, result
 
+    def update_pet_info(self, auth_key: json, pet_id: str, name: str,
+                        animal_type: str, age: int) -> json:
+        """Метод отправляет запрос на сервер об обновлении данных питомца по указанному ID и
+        возвращает статус запроса и result в формате JSON с обновлёнными данными питомца"""
 
-    def put_update_pet_info(self, auth_key: str, pet_id: str, name: str = "", animal_type: str = "", age: int = 0) -> json:
-        """This method allows to update information about pet."""
-
-        headers = {
-            'auth_key': auth_key,
-        }
+        headers = {'auth_key': auth_key['key']}
         data = {
             'name': name,
-            'animal_type': animal_type,
             'age': age,
+            'animal_type': animal_type
         }
-        res = requests.put(self.base_url + 'api/pets' + pet_id, headers=headers, data=data)
+
+        res = requests.put(self.base_url + 'api/pets/' + pet_id, headers=headers, data=data)
         status = res.status_code
         result = ""
         try:
